@@ -206,3 +206,146 @@ document.getElementById('profileForm').addEventListener('submit', async (e) => {
         Swal.fire('เกิดข้อผิดพลาด', res.message, 'error');
     }
 });
+
+// --- Modal Handlers ---
+function openModal(type, id = null) {
+    if(appState.user.role === 'Guest') return Swal.fire('ไม่อนุญาต', 'Guest ไม่สามารถจัดการข้อมูลได้', 'warning');
+    
+    document.getElementById(`modal-${type}`).classList.remove('hidden');
+    
+    if (type === 'activity') {
+        const selectType = document.getElementById('act-type');
+        selectType.innerHTML = appState.types.map(t => `<option value="${t.id}">${t.name}</option>`).join('');
+        
+        if (id) {
+            const act = appState.activities.find(a => a.id === id);
+            document.getElementById('modal-act-title').innerText = 'แก้ไขข้อมูลกิจกรรม';
+            document.getElementById('act-id').value = act.id;
+            document.getElementById('act-title').value = act.title;
+            document.getElementById('act-type').value = act.type_id;
+            document.getElementById('act-assignee').value = act.assignee;
+            document.getElementById('act-start').value = act.start_date;
+            document.getElementById('act-end').value = act.end_date || act.deadline;
+            document.getElementById('act-progress').value = act.progress;
+            document.getElementById('act-status').value = act.status;
+            document.getElementById('act-result').value = act.result;
+        } else {
+            document.getElementById('activityForm').reset();
+            document.getElementById('act-id').value = '';
+            document.getElementById('modal-act-title').innerText = 'เพิ่มกิจกรรมใหม่';
+        }
+    }
+
+    if (type === 'user') {
+        if (id) {
+            const user = appState.users.find(u => u.id === id);
+            document.getElementById('user-id').value = user.id;
+            document.getElementById('u-name').value = user.name;
+            document.getElementById('u-user').value = user.username;
+            document.getElementById('u-role').value = user.role;
+            document.getElementById('u-status').value = user.status;
+            document.getElementById('pass-field').querySelector('label').innerText = "Password (กรอกเมื่อต้องการเปลี่ยน)";
+        } else {
+            document.getElementById('userForm').reset();
+            document.getElementById('user-id').value = '';
+            document.getElementById('pass-field').querySelector('label').innerText = "Password (รหัสผ่านเริ่มต้น)";
+        }
+    }
+}
+
+function closeModal(type) {
+    document.getElementById(`modal-${type}`).classList.add('hidden');
+}
+
+// --- Submit Activity ---
+document.getElementById('activityForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const payload = {
+        id: document.getElementById('act-id').value,
+        title: document.getElementById('act-title').value,
+        type_id: document.getElementById('act-type').value,
+        assignee: document.getElementById('act-assignee').value,
+        start_date: document.getElementById('act-start').value,
+        end_date: document.getElementById('act-end').value,
+        progress: document.getElementById('act-progress').value,
+        status: document.getElementById('act-status').value,
+        result: document.getElementById('act-result').value
+    };
+
+    Swal.fire({ title: 'กำลังบันทึก...', didOpen: () => Swal.showLoading() });
+    const res = await callAPI('saveActivity', payload);
+    if(res.status === 'success') {
+        closeModal('activity');
+        await initApp(); // รีโหลดข้อมูลใหม่
+        Swal.fire('สำเร็จ', 'บันทึกข้อมูลเรียบร้อยแล้ว', 'success');
+    }
+});
+
+// --- Table Rendering ---
+function renderActivityTable() {
+    const container = document.getElementById('activityTableContainer');
+    let html = `
+        <div class="flex justify-between mb-4">
+            <input type="text" placeholder="ค้นหากิจกรรม..." onkeyup="filterTable(this)" class="border p-2 rounded-lg w-64">
+            <button onclick="openModal('activity')" class="bg-blue-600 text-white px-4 py-2 rounded-lg id-action-btn"><i class="fas fa-plus mr-1"></i> เพิ่มกิจกรรม</button>
+        </div>
+        <table class="w-full text-left border-collapse">
+            <thead>
+                <tr class="bg-gray-100">
+                    <th class="p-3 border-b">กิจกรรม</th>
+                    <th class="p-3 border-b">ประเภท</th>
+                    <th class="p-3 border-b text-center">ความก้าวหน้า</th>
+                    <th class="p-3 border-b">ผู้รับผิดชอบ</th>
+                    <th class="p-3 border-b">ดำเนินการ</th>
+                </tr>
+            </thead>
+            <tbody>
+    `;
+
+    appState.activities.forEach(act => {
+        const type = appState.types.find(t => t.id == act.type_id);
+        html += `
+            <tr class="hover:bg-gray-50 border-b">
+                <td class="p-3 font-medium">${act.title}</td>
+                <td class="p-3"><span class="px-2 py-1 rounded text-xs text-white" style="background:${type?.color}">${type?.name}</span></td>
+                <td class="p-3">
+                    <div class="w-full bg-gray-200 rounded-full h-2">
+                        <div class="bg-blue-600 h-2 rounded-full" style="width: ${act.progress}%"></div>
+                    </div>
+                    <p class="text-[10px] text-center mt-1">${act.progress}%</p>
+                </td>
+                <td class="p-3 text-sm">${act.assignee}</td>
+                <td class="p-3">
+                    <div class="flex gap-2">
+                        <button onclick="openModal('activity', '${act.id}')" class="text-blue-500 hover:text-blue-700"><i class="fas fa-edit"></i></button>
+                        <button onclick="deleteActivity('${act.id}')" class="text-red-500 hover:text-red-700 id-action-btn"><i class="fas fa-trash"></i></button>
+                    </div>
+                </td>
+            </tr>
+        `;
+    });
+    html += `</tbody></table>`;
+    container.innerHTML = html;
+}
+
+// ฟังก์ชันลบกิจกรรม
+async function deleteActivity(id) {
+    const confirm = await Swal.fire({
+        title: 'ยืนยันการลบ?',
+        text: "ข้อมูลกิจกรรมจะหายไปอย่างถาวร!",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        confirmButtonText: 'ใช่, ลบเลย',
+        cancelButtonText: 'ยกเลิก'
+    });
+
+    if(confirm.isConfirmed) {
+        Swal.fire({ title: 'กำลังลบ...', didOpen: () => Swal.showLoading() });
+        const res = await callAPI('deleteActivity', { id: id });
+        if(res.status === 'success') {
+            await initApp();
+            Swal.fire('ลบแล้ว!', 'ข้อมูลถูกลบเรียบร้อย', 'success');
+        }
+    }
+}
