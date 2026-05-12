@@ -4,14 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>JVL QI Management</title>
-    <!-- CSS & Libraries -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js"></script>
     
-    <!-- Google Charts สำหรับ Gantt -->
-    <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+    <link href="https://cdn.dhtmlx.com/gantt/edge/dhtmlxgantt.css" rel="stylesheet">
+    <script src="https://cdn.dhtmlx.com/gantt/edge/dhtmlxgantt.js"></script>
     
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600&display=swap" rel="stylesheet">
@@ -20,8 +19,6 @@
         body { font-family: 'Prompt', sans-serif; background-color: #f8fafc; }
         .theme-bg { background: linear-gradient(135deg, #0f172a, #1e3a8a, #047857); }
         .glass { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); }
-        
-        /* ธีมสี 7 วัน สำหรับ FullCalendar */
         .fc-col-header-cell.fc-day-sun { background-color: #ffebee !important; color: #c62828; }
         .fc-col-header-cell.fc-day-mon { background-color: #fffde7 !important; color: #f9a825; }
         .fc-col-header-cell.fc-day-tue { background-color: #fce4ec !important; color: #ad1457; }
@@ -30,7 +27,9 @@
         .fc-col-header-cell.fc-day-fri { background-color: #e1f5fe !important; color: #0277bd; }
         .fc-col-header-cell.fc-day-sat { background-color: #f3e5f5 !important; color: #6a1b9a; }
 
-        /* สำหรับ Print */
+        /* ปรับแต่งความสูงของ Gantt */
+        #gantt_here { width: 100%; height: 500px; border-radius: 8px; border: 1px solid #e2e8f0; }
+
         @media print {
             aside, .id-action-btn, #loginForm, nav { display: none !important; }
             main { padding: 0 !important; background: white !important; }
@@ -41,7 +40,6 @@
 </head>
 <body class="text-gray-800 h-screen flex overflow-hidden">
 
-    <!-- ================= LOGIN VIEW ================= -->
     <div id="view-login" class="fixed inset-0 w-full h-full theme-bg flex items-center justify-center p-4 z-50">
         <div class="glass rounded-2xl shadow-2xl w-full max-w-md p-8">
             <div class="text-center mb-6">
@@ -50,39 +48,23 @@
                 <p class="text-sm text-gray-500 mt-1">ระบบบริหารจัดการกลุ่มภารกิจพัฒนาสู่ความเป็นเลิศ</p>
             </div>
             <form id="loginForm" class="space-y-4">
-                <div>
-                    <input type="text" id="loginUser" placeholder="Username" required class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
-                </div>
-                <div>
-                    <input type="password" id="loginPass" placeholder="Password" required class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
-                </div>
+                <div><input type="text" id="loginUser" placeholder="Username" required class="w-full px-4 py-2 border rounded-lg outline-none"></div>
+                <div><input type="password" id="loginPass" placeholder="Password" required class="w-full px-4 py-2 border rounded-lg outline-none"></div>
                 <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg shadow transition">เข้าสู่ระบบ</button>
             </form>
-            <div class="mt-4 flex items-center">
-                <span class="h-px bg-gray-300 flex-1"></span>
-                <span class="px-3 text-gray-400 text-sm">หรือ</span>
-                <span class="h-px bg-gray-300 flex-1"></span>
-            </div>
-            <button onclick="loginGuest()" type="button" class="mt-4 w-full border border-gray-300 text-gray-600 py-2 rounded-lg hover:bg-gray-50 transition">
-                <i class="fas fa-eye mr-2"></i>เข้าชมแบบ Guest
-            </button>
+            <div class="mt-4 flex items-center"><span class="h-px bg-gray-300 flex-1"></span><span class="px-3 text-gray-400 text-sm">หรือ</span><span class="h-px bg-gray-300 flex-1"></span></div>
+            <button onclick="loginGuest()" type="button" class="mt-4 w-full border border-gray-300 text-gray-600 py-2 rounded-lg hover:bg-gray-50 transition"><i class="fas fa-eye mr-2"></i>เข้าชมแบบ Guest</button>
         </div>
     </div>
 
-    <!-- ================= MAIN APP VIEW ================= -->
     <div id="view-app" class="hidden w-full h-full flex">
-        
-        <!-- Sidebar -->
         <aside class="w-64 bg-white shadow-xl flex flex-col z-10 hidden md:flex">
-            <div class="p-4 border-b text-center theme-bg text-white">
-                <h2 class="font-bold text-lg truncate">JVL QI Management</h2>
-            </div>
+            <div class="p-4 border-b text-center theme-bg text-white"><h2 class="font-bold text-lg truncate">JVL QI Management</h2></div>
             <nav class="flex-1 p-4 space-y-2 overflow-y-auto" id="mainNav">
                 <a href="#" onclick="nav('dashboard')" class="nav-btn block py-2 px-4 rounded-lg hover:bg-blue-50 text-blue-700 bg-blue-50"><i class="fas fa-chart-pie mr-2"></i> Dashboard</a>
                 <a href="#" onclick="nav('activities')" class="nav-btn block py-2 px-4 rounded-lg hover:bg-blue-50"><i class="fas fa-tasks mr-2"></i> จัดการกิจกรรม</a>
                 <a href="#" onclick="nav('calendar')" class="nav-btn block py-2 px-4 rounded-lg hover:bg-blue-50"><i class="fas fa-calendar-alt mr-2"></i> ปฏิทิน</a>
                 <a href="#" onclick="nav('gantt')" class="nav-btn block py-2 px-4 rounded-lg hover:bg-blue-50"><i class="fas fa-stream mr-2"></i> Gantt Chart</a>
-                
                 <div id="adminMenu" class="pt-4 mt-4 border-t hidden">
                     <p class="text-xs text-gray-400 mb-2 px-4">ผู้ดูแลระบบ</p>
                     <a href="#" onclick="nav('users')" class="nav-btn block py-2 px-4 rounded-lg hover:bg-blue-50"><i class="fas fa-users-cog mr-2"></i> จัดการ User</a>
@@ -92,147 +74,111 @@
             <div class="p-4 border-t flex items-center justify-between">
                 <div class="flex items-center cursor-pointer" onclick="nav('profile')">
                     <img id="userAvatar" src="https://ui-avatars.com/api/?name=User" class="w-8 h-8 rounded-full bg-gray-200">
-                    <div class="ml-2 text-sm">
-                        <p id="userNameDisplay" class="font-bold truncate w-24">Name</p>
-                        <p id="userRoleDisplay" class="text-xs text-gray-500">Role</p>
-                    </div>
+                    <div class="ml-2 text-sm"><p id="userNameDisplay" class="font-bold truncate w-24">Name</p><p id="userRoleDisplay" class="text-xs text-gray-500">Role</p></div>
                 </div>
                 <button onclick="logout()" class="text-red-500 hover:text-red-700"><i class="fas fa-sign-out-alt"></i></button>
             </div>
         </aside>
 
-        <!-- Main Content -->
         <main class="flex-1 overflow-y-auto bg-slate-50 p-6 relative">
-            
-            <!-- Dashboard View -->
             <div id="page-dashboard" class="page-content block">
                 <h2 class="text-2xl font-bold text-gray-800 mb-6">ภาพรวมระบบ (Dashboard)</h2>
                 <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-                    <div class="bg-white p-4 rounded-xl shadow border-l-4 border-blue-500 cursor-pointer hover:shadow-md transition" onclick="nav('activities')">
-                        <p class="text-gray-500 text-sm">งานทั้งหมดสะสม</p>
-                        <h3 class="text-2xl font-bold" id="kpi-total">0</h3>
-                    </div>
-                    <div class="bg-white p-4 rounded-xl shadow border-l-4 border-yellow-500">
-                        <p class="text-gray-500 text-sm">งานกำลังดำเนิน</p>
-                        <h3 class="text-2xl font-bold" id="kpi-ongoing">0</h3>
-                    </div>
-                    <div class="bg-white p-4 rounded-xl shadow border-l-4 border-red-500 cursor-pointer hover:shadow-md transition" onclick="filterTableByDeadline()">
-                        <p class="text-gray-500 text-sm">Deadline ภายใน 7 วัน</p>
-                        <h3 class="text-2xl font-bold" id="kpi-deadline">0</h3>
-                    </div>
-                    <div class="bg-white p-4 rounded-xl shadow border-l-4 border-green-500">
-                        <p class="text-gray-500 text-sm">เสร็จสิ้นแล้ว</p>
-                        <h3 class="text-2xl font-bold" id="kpi-done">0</h3>
-                    </div>
+                    <div class="bg-white p-4 rounded-xl shadow border-l-4 border-blue-500 cursor-pointer hover:shadow-md" onclick="nav('activities')"><p class="text-gray-500 text-sm">งานทั้งหมดสะสม</p><h3 class="text-2xl font-bold" id="kpi-total">0</h3></div>
+                    <div class="bg-white p-4 rounded-xl shadow border-l-4 border-yellow-500"><p class="text-gray-500 text-sm">งานกำลังดำเนิน</p><h3 class="text-2xl font-bold" id="kpi-ongoing">0</h3></div>
+                    <div class="bg-white p-4 rounded-xl shadow border-l-4 border-red-500 cursor-pointer hover:shadow-md" onclick="filterTableByDeadline()"><p class="text-gray-500 text-sm">Deadline ภายใน 7 วัน</p><h3 class="text-2xl font-bold" id="kpi-deadline">0</h3></div>
+                    <div class="bg-white p-4 rounded-xl shadow border-l-4 border-green-500"><p class="text-gray-500 text-sm">เสร็จสิ้นแล้ว</p><h3 class="text-2xl font-bold" id="kpi-done">0</h3></div>
                 </div>
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <div class="bg-white p-4 rounded-xl shadow"><canvas id="chartType"></canvas></div>
-                </div>
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6"><div class="bg-white p-4 rounded-xl shadow"><canvas id="chartType"></canvas></div></div>
             </div>
 
-            <!-- Profile View -->
             <div id="page-profile" class="page-content hidden">
                 <h2 class="text-2xl font-bold text-gray-800 mb-6">จัดการโปรไฟล์ส่วนตัว</h2>
                 <div class="bg-white p-6 rounded-xl shadow max-w-lg">
                     <form id="profileForm" class="space-y-4">
-                        <div>
-                            <label class="block text-sm mb-1">รูปโปรไฟล์ (URL)</label>
-                            <input type="text" id="profImg" class="w-full border rounded p-2">
-                        </div>
-                        <div>
-                            <label class="block text-sm mb-1">เปลี่ยนรหัสผ่านใหม่ (เว้นว่างไว้ถ้าไม่เปลี่ยน)</label>
-                            <input type="password" id="profPass" class="w-full border rounded p-2">
-                        </div>
+                        <div><label class="block text-sm mb-1">รูปโปรไฟล์ (URL)</label><input type="text" id="profImg" class="w-full border rounded p-2"></div>
+                        <div><label class="block text-sm mb-1">เปลี่ยนรหัสผ่านใหม่ (เว้นว่างไว้ถ้าไม่เปลี่ยน)</label><input type="password" id="profPass" class="w-full border rounded p-2"></div>
                         <button type="submit" class="bg-green-600 text-white px-4 py-2 rounded id-action-btn">บันทึกข้อมูล</button>
                     </form>
                 </div>
             </div>
 
-            <!-- Calendar View -->
             <div id="page-calendar" class="page-content hidden">
                 <h2 class="text-2xl font-bold text-gray-800 mb-6">ปฏิทินกิจกรรม</h2>
-                <div class="bg-white p-4 rounded-xl shadow">
-                    <div id="calendar"></div>
-                </div>
+                <div class="bg-white p-4 rounded-xl shadow"><div id="calendar"></div></div>
             </div>
 
-            <!-- Activities View -->
             <div id="page-activities" class="page-content hidden">
                 <div class="flex justify-between items-center mb-4">
                     <h2 class="text-2xl font-bold text-gray-800">รายการกิจกรรม</h2>
-                    <button onclick="window.print()" class="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 shadow id-action-btn">
-                        <i class="fas fa-print mr-1"></i> พิมพ์รายงาน
-                    </button>
+                    <button onclick="window.print()" class="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 shadow id-action-btn"><i class="fas fa-print mr-1"></i> พิมพ์รายงาน</button>
                 </div>
                 <div id="activityTableContainer" class="bg-white p-4 rounded-xl shadow overflow-x-auto"></div>
             </div>
 
-            <!-- Gantt Chart View -->
             <div id="page-gantt" class="page-content hidden">
-                <h2 class="text-2xl font-bold mb-4">Gantt Chart แผนการดำเนินงาน</h2>
-                <div class="bg-white p-4 rounded-xl shadow overflow-x-auto">
-                    <div id="gantt-target" class="w-full min-h-[300px]"></div>
+                <h2 class="text-2xl font-bold text-gray-800 mb-4">Gantt Chart แผนการดำเนินงาน</h2>
+                <div class="bg-white p-4 rounded-xl shadow overflow-hidden">
+                    <div class="flex gap-2 mb-4">
+                        <button onclick="setGanttZoom('week')" class="px-3 py-1 bg-gray-200 hover:bg-gray-300 rounded text-sm">สัปดาห์</button>
+                        <button onclick="setGanttZoom('month')" class="px-3 py-1 bg-gray-200 hover:bg-gray-300 rounded text-sm">เดือน</button>
+                        <button onclick="setGanttZoom('quarter')" class="px-3 py-1 bg-gray-200 hover:bg-gray-300 rounded text-sm">ไตรมาส</button>
+                        <button onclick="setGanttZoom('year')" class="px-3 py-1 bg-gray-200 hover:bg-gray-300 rounded text-sm">ปี</button>
+                    </div>
+                    <div id="gantt_here"></div>
                 </div>
             </div>
             
-            <!-- Users View -->
-            <div id="page-users" class="page-content hidden">
-                <h2 class="text-2xl font-bold mb-4">จัดการ User</h2>
-                <div id="userTableContainer" class="bg-white p-4 rounded-xl shadow overflow-x-auto"></div>
-            </div>
-            
-            <!-- Types View -->
-            <div id="page-types" class="page-content hidden">
-                <h2 class="text-2xl font-bold mb-4">ประเภทกิจกรรม</h2>
-                <div id="typeTableContainer" class="bg-white p-4 rounded-xl shadow overflow-x-auto"></div>
-            </div>
-
+            <div id="page-users" class="page-content hidden"><h2 class="text-2xl font-bold mb-4">จัดการ User</h2><div id="userTableContainer" class="bg-white p-4 rounded-xl shadow overflow-x-auto"></div></div>
+            <div id="page-types" class="page-content hidden"><h2 class="text-2xl font-bold mb-4">ประเภทกิจกรรม</h2><div id="typeTableContainer" class="bg-white p-4 rounded-xl shadow overflow-x-auto"></div></div>
         </main>
     </div>
 
-    <!-- ================= MODALS ================= -->
-    
-    <!-- Activity Modal -->
     <div id="modal-activity" class="hidden fixed inset-0 z-50 overflow-y-auto bg-black bg-opacity-50 flex items-center justify-center p-4">
         <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden">
             <div class="theme-bg p-4 text-white flex justify-between items-center">
-                <h3 id="modal-act-title" class="font-bold text-lg">บันทึกกิจกรรม</h3>
+                <h3 id="modal-act-title" class="font-bold text-lg">รายละเอียดกิจกรรม</h3>
                 <button type="button" onclick="closeModal('activity')" class="text-white hover:text-gray-200"><i class="fas fa-times"></i></button>
             </div>
             <form id="activityForm" class="p-6 space-y-4">
                 <input type="hidden" id="act-id">
+                <input type="hidden" id="act-created-by"> <div>
+                    <label class="block text-sm font-medium text-gray-700">กิจกรรมภายใต้ (กิจกรรมหลัก)</label>
+                    <select id="act-parent" class="w-full border rounded-lg p-2 outline-none act-input"></select>
+                    <p class="text-[10px] text-gray-500 mt-1">*เว้นว่างไว้ถ้าเป็นกิจกรรมหลัก (หมวดใหญ่)</p>
+                </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700">ชื่อกิจกรรม / ภารกิจ</label>
-                    <input type="text" id="act-title" required class="w-full border rounded-lg p-2 outline-none">
+                    <input type="text" id="act-title" required class="w-full border rounded-lg p-2 outline-none act-input">
                 </div>
                 <div class="grid grid-cols-2 gap-4">
                     <div>
                         <label class="block text-sm font-medium text-gray-700">ประเภท</label>
-                        <select id="act-type" required class="w-full border rounded-lg p-2 outline-none"></select>
+                        <select id="act-type" required class="w-full border rounded-lg p-2 outline-none act-input"></select>
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700">ผู้รับผิดชอบ</label>
-                        <input type="text" id="act-assignee" class="w-full border rounded-lg p-2 outline-none">
+                        <input type="text" id="act-assignee" class="w-full border rounded-lg p-2 outline-none act-input">
                     </div>
                 </div>
                 <div class="grid grid-cols-2 gap-4">
                     <div>
                         <label class="block text-sm font-medium text-gray-700">วันที่เริ่ม</label>
-                        <input type="date" id="act-start" class="w-full border rounded-lg p-2 outline-none">
+                        <input type="date" id="act-start" class="w-full border rounded-lg p-2 outline-none act-input">
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700">วันที่สิ้นสุด / Deadline</label>
-                        <input type="date" id="act-end" class="w-full border rounded-lg p-2 outline-none">
+                        <input type="date" id="act-end" class="w-full border rounded-lg p-2 outline-none act-input">
                     </div>
                 </div>
                 <div class="grid grid-cols-2 gap-4">
                     <div>
                         <label class="block text-sm font-medium text-gray-700">ความก้าวหน้า (%)</label>
-                        <input type="number" id="act-progress" min="0" max="100" value="0" class="w-full border rounded-lg p-2 outline-none">
+                        <input type="number" id="act-progress" min="0" max="100" class="w-full border rounded-lg p-2 outline-none act-input">
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700">สถานะ</label>
-                        <select id="act-status" class="w-full border rounded-lg p-2 outline-none">
+                        <select id="act-status" class="w-full border rounded-lg p-2 outline-none act-input">
                             <option value="Ongoing">กำลังดำเนินงาน</option>
                             <option value="Done">เสร็จสิ้น</option>
                             <option value="Cancel">ยกเลิก</option>
@@ -241,83 +187,19 @@
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700">ผลลัพธ์ / หมายเหตุ</label>
-                    <textarea id="act-result" rows="2" class="w-full border rounded-lg p-2 outline-none"></textarea>
+                    <textarea id="act-result" rows="2" class="w-full border rounded-lg p-2 outline-none act-input"></textarea>
                 </div>
-                <div class="flex justify-end gap-2 pt-2">
-                    <button type="button" onclick="closeModal('activity')" class="px-4 py-2 text-gray-500 hover:bg-gray-100 rounded-lg">ยกเลิก</button>
-                    <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow id-action-btn">บันทึกข้อมูล</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- User Modal -->
-    <div id="modal-user" class="hidden fixed inset-0 z-50 overflow-y-auto bg-black bg-opacity-50 flex items-center justify-center p-4">
-        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
-            <div class="bg-gray-800 p-4 text-white flex justify-between items-center">
-                <h3 class="font-bold text-lg">จัดการผู้ใช้งาน</h3>
-                <button type="button" onclick="closeModal('user')" class="text-white hover:text-gray-200"><i class="fas fa-times"></i></button>
-            </div>
-            <form id="userForm" class="p-6 space-y-4">
-                <input type="hidden" id="u-id">
-                <div>
-                    <label class="block text-sm font-medium">ชื่อ-นามสกุล</label>
-                    <input type="text" id="u-name" required class="w-full border rounded-lg p-2">
-                </div>
-                <div>
-                    <label class="block text-sm font-medium">Username</label>
-                    <input type="text" id="u-user" required class="w-full border rounded-lg p-2">
-                </div>
-                <div>
-                    <label class="block text-sm font-medium" id="lbl-u-pass">Password (ตั้งใหม่)</label>
-                    <input type="password" id="u-pass" class="w-full border rounded-lg p-2">
-                </div>
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-sm font-medium">บทบาท</label>
-                        <select id="u-role" class="w-full border rounded-lg p-2">
-                            <option value="User">User</option>
-                            <option value="Admin">Admin</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium">สถานะ</label>
-                        <select id="u-status" class="w-full border rounded-lg p-2">
-                            <option value="Active">เปิดใช้งาน</option>
-                            <option value="Inactive">ระงับใช้งาน</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="flex justify-end pt-2">
-                    <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg shadow">บันทึก</button>
+                <div class="flex justify-end gap-2 pt-2 border-t mt-4 pt-4">
+                    <button type="button" onclick="closeModal('activity')" class="px-4 py-2 text-gray-500 hover:bg-gray-100 rounded-lg">ปิด</button>
+                    <button type="button" id="btn-edit-act" onclick="enableEditMode()" class="hidden px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg shadow"><i class="fas fa-edit"></i> แก้ไขข้อมูล</button>
+                    <button type="submit" id="btn-save-act" class="hidden px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow"><i class="fas fa-save"></i> บันทึกข้อมูล</button>
                 </div>
             </form>
         </div>
     </div>
 
-    <!-- Type Modal -->
-    <div id="modal-type" class="hidden fixed inset-0 z-50 overflow-y-auto bg-black bg-opacity-50 flex items-center justify-center p-4">
-        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
-            <div class="bg-green-700 p-4 text-white flex justify-between items-center">
-                <h3 class="font-bold text-lg">จัดการประเภท</h3>
-                <button type="button" onclick="closeModal('type')" class="text-white hover:text-gray-200"><i class="fas fa-times"></i></button>
-            </div>
-            <form id="typeForm" class="p-6 space-y-4">
-                <input type="hidden" id="t-id">
-                <div>
-                    <label class="block text-sm font-medium">ชื่อประเภท</label>
-                    <input type="text" id="t-name" required class="w-full border rounded-lg p-2">
-                </div>
-                <div>
-                    <label class="block text-sm font-medium">สีประจำประเภท (HEX)</label>
-                    <input type="color" id="t-color" value="#3b82f6" class="w-full h-10 border rounded-lg cursor-pointer">
-                </div>
-                <div class="flex justify-end pt-2">
-                    <button type="submit" class="px-4 py-2 bg-green-600 text-white rounded-lg shadow">บันทึก</button>
-                </div>
-            </form>
-        </div>
-    </div>
+    <div id="modal-user" class="hidden fixed inset-0 z-50 overflow-y-auto bg-black bg-opacity-50 flex items-center justify-center p-4"><div class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden"><div class="bg-gray-800 p-4 text-white flex justify-between items-center"><h3 class="font-bold text-lg">จัดการผู้ใช้งาน</h3><button type="button" onclick="closeModal('user')" class="text-white"><i class="fas fa-times"></i></button></div><form id="userForm" class="p-6 space-y-4"><input type="hidden" id="u-id"><div><label class="block text-sm">ชื่อ-นามสกุล</label><input type="text" id="u-name" required class="w-full border rounded-lg p-2"></div><div><label class="block text-sm">Username</label><input type="text" id="u-user" required class="w-full border rounded-lg p-2"></div><div><label class="block text-sm" id="lbl-u-pass">Password (ตั้งใหม่)</label><input type="password" id="u-pass" class="w-full border rounded-lg p-2"></div><div class="grid grid-cols-2 gap-4"><div><label class="block text-sm">บทบาท</label><select id="u-role" class="w-full border rounded-lg p-2"><option value="User">User</option><option value="Admin">Admin</option></select></div><div><label class="block text-sm">สถานะ</label><select id="u-status" class="w-full border rounded-lg p-2"><option value="Active">เปิดใช้งาน</option><option value="Inactive">ระงับใช้งาน</option></select></div></div><div class="flex justify-end pt-2"><button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg">บันทึก</button></div></form></div></div>
+    <div id="modal-type" class="hidden fixed inset-0 z-50 overflow-y-auto bg-black bg-opacity-50 flex items-center justify-center p-4"><div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden"><div class="bg-green-700 p-4 text-white flex justify-between items-center"><h3 class="font-bold text-lg">จัดการประเภท</h3><button type="button" onclick="closeModal('type')" class="text-white"><i class="fas fa-times"></i></button></div><form id="typeForm" class="p-6 space-y-4"><input type="hidden" id="t-id"><div><label class="block text-sm">ชื่อประเภท</label><input type="text" id="t-name" required class="w-full border rounded-lg p-2"></div><div><label class="block text-sm">สีประจำประเภท (HEX)</label><input type="color" id="t-color" value="#3b82f6" class="w-full h-10 border rounded-lg cursor-pointer"></div><div class="flex justify-end pt-2"><button type="submit" class="px-4 py-2 bg-green-600 text-white rounded-lg">บันทึก</button></div></form></div></div>
 
     <script src="app.js"></script>
 </body>
