@@ -58,14 +58,14 @@ function loginGuest() {
 
 function logout() {
     appState.user = null;
-    document.getElementById('view-app').classList.remove('active');
-    document.getElementById('view-login').classList.add('active');
+    document.getElementById('view-app').classList.add('hidden');
+    document.getElementById('view-login').classList.remove('hidden');
 }
 
 // --- App Initialization & Navigation ---
 async function initApp() {
-    document.getElementById('view-login').classList.remove('active');
-    document.getElementById('view-app').classList.add('active');
+    document.getElementById('view-login').classList.add('hidden');
+    document.getElementById('view-app').classList.remove('hidden');
     
     // อัปเดตข้อมูลผู้ใช้ใน Sidebar
     document.getElementById('userNameDisplay').innerText = appState.user.name;
@@ -74,14 +74,14 @@ async function initApp() {
 
     // จัดการสิทธิ์
     const adminMenu = document.getElementById('adminMenu');
-    const actionBtns = document.querySelectorAll('.id-action-btn'); // ปุ่ม Submit ต่างๆ
+    const actionBtns = document.querySelectorAll('.id-action-btn'); 
     
     if (appState.user.role === 'Admin') {
         adminMenu.classList.remove('hidden');
         actionBtns.forEach(btn => btn.style.display = 'block');
     } else if (appState.user.role === 'Guest') {
         adminMenu.classList.add('hidden');
-        actionBtns.forEach(btn => btn.style.display = 'none'); // Guest ดูได้อย่างเดียว
+        actionBtns.forEach(btn => btn.style.display = 'none'); 
     } else {
         adminMenu.classList.add('hidden');
         actionBtns.forEach(btn => btn.style.display = 'block');
@@ -95,20 +95,28 @@ async function initApp() {
         appState.users = data.users || [];
         appState.types = data.types || [];
         Swal.close();
-        nav('dashboard'); // เปิดหน้าแรก
+        nav('dashboard'); 
+    } else {
+        Swal.fire('ข้อผิดพลาด', 'ไม่สามารถโหลดข้อมูลจาก Google Sheets ได้', 'error');
     }
 }
 
 function nav(page) {
     // ซ่อนทุกหน้า
     document.querySelectorAll('.page-content').forEach(el => el.classList.add('hidden'));
+    // ลบไฮไลต์ปุ่มเมนูทั้งหมด
     document.querySelectorAll('.nav-btn').forEach(el => {
         el.classList.remove('bg-blue-50', 'text-blue-700');
     });
 
     // แสดงหน้าที่เลือก
     document.getElementById(`page-${page}`).classList.remove('hidden');
-    event.currentTarget?.classList?.add('bg-blue-50', 'text-blue-700');
+    
+    // หาปุ่มเมนูที่กำลังเลือกอยู่แล้วใส่ไฮไลต์สี
+    const activeBtn = document.querySelector(`[onclick="nav('${page}')"]`);
+    if(activeBtn) {
+        activeBtn.classList.add('bg-blue-50', 'text-blue-700');
+    }
 
     // โหลด Component ของหน้านั้น
     if (page === 'dashboard') renderDashboard();
