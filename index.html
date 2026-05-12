@@ -9,6 +9,10 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js"></script>
+    <!-- เพิ่ม Frappe Gantt -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/frappe-gantt/0.6.1/frappe-gantt.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/frappe-gantt/0.6.1/frappe-gantt.js"></script>
+    
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600&display=swap" rel="stylesheet">
     
@@ -17,7 +21,7 @@
         .theme-bg { background: linear-gradient(135deg, #0f172a, #1e3a8a, #047857); }
         .glass { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); }
         
-        /* ธีมสี 7 วัน สำหรับ FullCalendar Header */
+        /* ธีมสี 7 วัน สำหรับ FullCalendar */
         .fc-col-header-cell.fc-day-sun { background-color: #ffebee !important; color: #c62828; }
         .fc-col-header-cell.fc-day-mon { background-color: #fffde7 !important; color: #f9a825; }
         .fc-col-header-cell.fc-day-tue { background-color: #fce4ec !important; color: #ad1457; }
@@ -25,12 +29,19 @@
         .fc-col-header-cell.fc-day-thu { background-color: #fff3e0 !important; color: #ef6c00; }
         .fc-col-header-cell.fc-day-fri { background-color: #e1f5fe !important; color: #0277bd; }
         .fc-col-header-cell.fc-day-sat { background-color: #f3e5f5 !important; color: #6a1b9a; }
+
+        /* สำหรับหน้าพิมพ์รายงาน (Print) */
+        @media print {
+            aside, .id-action-btn, #loginForm, nav { display: none !important; }
+            main { padding: 0 !important; background: white !important; }
+            .shadow { box-shadow: none !important; border: 1px solid #ddd; }
+            body { overflow: auto; }
+        }
     </style>
 </head>
 <body class="text-gray-800 h-screen flex overflow-hidden">
 
     <!-- ================= LOGIN VIEW ================= -->
-    <!-- ใช้ fixed และ inset-0 เพื่อให้อยู่กึ่งกลางหน้าจอเสมอ -->
     <div id="view-login" class="fixed inset-0 w-full h-full theme-bg flex items-center justify-center p-4 z-50">
         <div class="glass rounded-2xl shadow-2xl w-full max-w-md p-8">
             <div class="text-center mb-6">
@@ -49,7 +60,6 @@
     </div>
 
     <!-- ================= MAIN APP VIEW ================= -->
-    <!-- ซ่อนไว้ก่อน จะแสดงเมื่อ Login ผ่าน -->
     <div id="view-app" class="hidden w-full h-full flex">
         <!-- Sidebar -->
         <aside class="w-64 bg-white shadow-xl flex flex-col z-10 hidden md:flex">
@@ -90,8 +100,8 @@
                     <div class="bg-white p-4 rounded-xl shadow border-l-4 border-yellow-500">
                         <p class="text-gray-500 text-sm">งานกำลังดำเนิน</p><h3 class="text-2xl font-bold" id="kpi-ongoing">0</h3>
                     </div>
-                    <div class="bg-white p-4 rounded-xl shadow border-l-4 border-red-500">
-                        <p class="text-gray-500 text-sm">Deadline เร็วๆ นี้</p><h3 class="text-2xl font-bold" id="kpi-deadline">0</h3>
+                    <div class="bg-white p-4 rounded-xl shadow border-l-4 border-red-500 cursor-pointer" onclick="filterTableByDeadline()">
+                        <p class="text-gray-500 text-sm">Deadline ภายใน 7 วัน</p><h3 class="text-2xl font-bold" id="kpi-deadline">0</h3>
                     </div>
                     <div class="bg-white p-4 rounded-xl shadow border-l-4 border-green-500">
                         <p class="text-gray-500 text-sm">เสร็จสิ้นแล้ว</p><h3 class="text-2xl font-bold" id="kpi-done">0</h3>
@@ -99,7 +109,6 @@
                 </div>
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     <div class="bg-white p-4 rounded-xl shadow"><canvas id="chartType"></canvas></div>
-                    <div class="bg-white p-4 rounded-xl shadow flex items-center justify-center text-gray-400">กราฟอื่นๆ (เตรียมเพิ่ม)</div>
                 </div>
             </div>
 
@@ -123,14 +132,32 @@
 
             <!-- Activities View -->
             <div id="page-activities" class="page-content hidden">
-                <h2 class="text-2xl font-bold text-gray-800 mb-4">รายการกิจกรรม</h2>
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-2xl font-bold text-gray-800">รายการกิจกรรม</h2>
+                    <button onclick="window.print()" class="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 shadow id-action-btn"><i class="fas fa-print mr-1"></i> พิมพ์รายงาน</button>
+                </div>
                 <div id="activityTableContainer" class="bg-white p-4 rounded-xl shadow overflow-x-auto"></div>
             </div>
 
-            <!-- Placeholder Views -->
-            <div id="page-gantt" class="page-content hidden"><h2 class="text-2xl font-bold mb-4">Gantt Chart</h2><div class="bg-white p-4 rounded-xl shadow">กำลังพัฒนาการแสดงผล Gantt...</div></div>
-            <div id="page-users" class="page-content hidden"><h2 class="text-2xl font-bold mb-4">จัดการ User</h2><div class="bg-white p-4 rounded shadow">ตารางจัดการ User (เตรียมเพิ่ม)</div></div>
-            <div id="page-types" class="page-content hidden"><h2 class="text-2xl font-bold mb-4">ประเภทกิจกรรม</h2><div class="bg-white p-4 rounded shadow">ตารางประเภทกิจกรรม (เตรียมเพิ่ม)</div></div>
+            <!-- Gantt Chart View -->
+            <div id="page-gantt" class="page-content hidden">
+                <h2 class="text-2xl font-bold mb-4">Gantt Chart แผนการดำเนินงาน</h2>
+                <div class="bg-white p-4 rounded-xl shadow overflow-x-auto">
+                    <div id="gantt-target"></div>
+                </div>
+            </div>
+            
+            <!-- Users Management View -->
+            <div id="page-users" class="page-content hidden">
+                <h2 class="text-2xl font-bold mb-4">จัดการ User (สำหรับ Admin)</h2>
+                <div id="userTableContainer" class="bg-white p-4 rounded-xl shadow overflow-x-auto"></div>
+            </div>
+            
+            <!-- Type Management View -->
+            <div id="page-types" class="page-content hidden">
+                <h2 class="text-2xl font-bold mb-4">ประเภทกิจกรรม (สำหรับ Admin)</h2>
+                <div id="typeTableContainer" class="bg-white p-4 rounded-xl shadow overflow-x-auto"></div>
+            </div>
 
         </main>
     </div>
@@ -195,7 +222,43 @@
         </div>
     </div>
 
-    <!-- Script File -->
+    <!-- User Modal -->
+    <div id="modal-user" class="hidden fixed inset-0 z-50 overflow-y-auto bg-black bg-opacity-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+            <div class="bg-gray-800 p-4 text-white flex justify-between items-center">
+                <h3 class="font-bold text-lg">จัดการผู้ใช้งาน</h3>
+                <button type="button" onclick="closeModal('user')" class="text-white hover:text-gray-200"><i class="fas fa-times"></i></button>
+            </div>
+            <form id="userForm" class="p-6 space-y-4">
+                <input type="hidden" id="u-id">
+                <div><label class="block text-sm font-medium">ชื่อ-นามสกุล</label><input type="text" id="u-name" required class="w-full border rounded-lg p-2"></div>
+                <div><label class="block text-sm font-medium">Username</label><input type="text" id="u-user" required class="w-full border rounded-lg p-2"></div>
+                <div><label class="block text-sm font-medium" id="lbl-u-pass">Password (ตั้งใหม่)</label><input type="password" id="u-pass" class="w-full border rounded-lg p-2"></div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div><label class="block text-sm font-medium">บทบาท</label><select id="u-role" class="w-full border rounded-lg p-2"><option value="User">User</option><option value="Admin">Admin</option></select></div>
+                    <div><label class="block text-sm font-medium">สถานะ</label><select id="u-status" class="w-full border rounded-lg p-2"><option value="Active">เปิดใช้งาน</option><option value="Inactive">ระงับใช้งาน</option></select></div>
+                </div>
+                <div class="flex justify-end gap-2 pt-2"><button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg shadow">บันทึก</button></div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Type Modal -->
+    <div id="modal-type" class="hidden fixed inset-0 z-50 overflow-y-auto bg-black bg-opacity-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
+            <div class="bg-green-700 p-4 text-white flex justify-between items-center">
+                <h3 class="font-bold text-lg">จัดการประเภทกิจกรรม</h3>
+                <button type="button" onclick="closeModal('type')" class="text-white hover:text-gray-200"><i class="fas fa-times"></i></button>
+            </div>
+            <form id="typeForm" class="p-6 space-y-4">
+                <input type="hidden" id="t-id">
+                <div><label class="block text-sm font-medium">ชื่อประเภท</label><input type="text" id="t-name" required class="w-full border rounded-lg p-2"></div>
+                <div><label class="block text-sm font-medium">สีประจำประเภท (HEX)</label><input type="color" id="t-color" value="#3b82f6" class="w-full h-10 border rounded-lg cursor-pointer"></div>
+                <div class="flex justify-end gap-2 pt-2"><button type="submit" class="px-4 py-2 bg-green-600 text-white rounded-lg shadow">บันทึก</button></div>
+            </form>
+        </div>
+    </div>
+
     <script src="app.js"></script>
 </body>
 </html>
